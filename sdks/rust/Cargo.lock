@@ -151,6 +151,7 @@ dependencies = [
  "apache-beam-model",
  "apache-beam-runner-dataflow",
  "apache-beam-runner-prism",
+ "apache-beam-sql",
  "apache-beam-testing",
  "mimalloc",
 ]
@@ -511,6 +512,13 @@ dependencies = [
  "tokio",
  "tonic",
  "tracing",
+]
+
+[[package]]
+name = "apache-beam-sql"
+version = "2.78.0-SNAPSHOT"
+dependencies = [
+ "apache-beam-core",
 ]
 
 [[package]]

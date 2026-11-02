@@ -80,6 +80,9 @@ pub use testing;
 #[cfg(feature = "ml")]
 pub use ml;
 
+#[cfg(feature = "sql")]
+pub use sql;
+
 pub mod io {
     #[cfg(feature = "io-file")]
     pub use file;

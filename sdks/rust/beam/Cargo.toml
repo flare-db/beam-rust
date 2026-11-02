@@ -89,6 +89,8 @@ ml-onnx-cuda = ["ml", "ml/onnx-cuda"]
 ml-onnx-tensorrt = ["ml", "ml/onnx-tensorrt"]
 ml-onnx-coreml = ["ml", "ml/onnx-coreml"]
 ml-onnx-download = ["ml-onnx", "ml/onnx-download-binaries"]
+# Apache Beam SQL
+sql = ["dep:sql"]
 
 [dependencies]
 core = { workspace = true }
@@ -110,6 +112,7 @@ prism = { workspace = true, optional = true }
 dataflow = { workspace = true, optional = true }
 testing = { workspace = true, optional = true }
 ml = { workspace = true, optional = true }
+sql = {workspace = true, optional = true}
 mimalloc = { workspace = true, optional = true }
 
 [lints]
