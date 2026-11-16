@@ -60,10 +60,15 @@ impl DataFusionQueryPlanner {
         &self,
         sql_statement: &str,
     ) -> Result<Box<dyn BeamRelNode>, SqlTransformError> {
+        tracing::info!("SQL:\n{sql_statement}");
         let state = self.ctx.state();
         let plan = state.create_logical_plan(sql_statement).await?;
         let plan = state.optimize(&plan)?;
-        self.translate_plan(&plan)
+        tracing::info!("SQLPlan>\n{plan}");
+
+        let beam_plan = self.translate_plan(&plan)?;
+        tracing::info!("BEAMPlan>\n{}", beam_plan.explain());
+        Ok(beam_plan)
     }
 
     fn translate_plan(
@@ -199,6 +204,11 @@ mod tests {
 
     #[test]
     fn optimizer_pushes_join_filters_below_the_join() {
+        const QUERY: &str = "SELECT services.service, trips.trip_miles
+             FROM trips
+             JOIN services ON trips.hvfhs_license_num = services.license
+             WHERE services.service = 'Uber' AND trips.trip_miles > 10";
+
         let pipeline = Pipeline::new();
         let trips_schema = Arc::new(Schema::new(vec![
             Field::new("hvfhs_license_num", DataType::Utf8, true),
@@ -235,14 +245,7 @@ mod tests {
             ),
         ]);
 
-        let plan = plan_query(
-            "SELECT services.service, trips.trip_miles
-             FROM trips
-             JOIN services ON trips.hvfhs_license_num = services.license
-             WHERE services.service = 'Uber' AND trips.trip_miles > 10",
-            &tables,
-        )
-        .expect("optimized plan");
+        let plan = plan_query(QUERY, &tables).expect("optimized plan");
 
         let LogicalPlan::Projection(projection) = plan else {
             panic!("expected projection, got {plan}");
@@ -259,6 +262,23 @@ mod tests {
             matches!(join.right.as_ref(), LogicalPlan::Filter(_)),
             "service filter should be below the join: {}",
             projection.input
+        );
+
+        let planner = DataFusionQueryPlanner::new(&tables, 2).expect("planner");
+        let beam_plan = futures::executor::block_on(planner.build_plan(QUERY)).expect("Beam plan");
+        let explain = beam_plan.explain();
+        assert!(
+            explain.starts_with("BeamFilterRel("),
+            "projection should be rendered at the root: {explain}"
+        );
+        assert!(
+            explain.contains("BeamJoinRel(condition=["),
+            "join should be rendered below the projection: {explain}"
+        );
+        assert!(
+            explain.contains("BeamTableScanRel(table=[[trips]])")
+                && explain.contains("BeamTableScanRel(table=[[services]])"),
+            "both table scans should be rendered: {explain}"
         );
     }
 }

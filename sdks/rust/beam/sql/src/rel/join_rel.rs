@@ -24,7 +24,7 @@ use beam::{Error, Result};
 use datafusion::common::{DFSchemaRef, NullEquality};
 use datafusion::logical_expr::{Expr, JoinType};
 
-use crate::rel::{BeamRelNode, BeamSqlRelUtils, SqlRelContext};
+use crate::rel::{BeamRelNode, BeamSqlRelUtils, SqlRelContext, indent_plan};
 use crate::transform::join::Join;
 
 /// An equality join of two Beam SQL inputs.
@@ -131,5 +131,20 @@ impl BeamRelNode for BeamJoinRel {
                 .with_num_partitions(self.partition_size),
         );
         Ok(joined.with_arrow_schema(&self.output_schema))
+    }
+
+    fn explain(&self) -> String {
+        let condition = self
+            .on
+            .iter()
+            .map(|(left, right)| format!("{left} = {right}"))
+            .collect::<Vec<_>>()
+            .join(", ");
+        let join_type = format!("{:?}", self.join_type).to_ascii_lowercase();
+        format!(
+            "BeamJoinRel(condition=[{condition}], joinType=[{join_type}])\n{}\n{}",
+            indent_plan(&self.left.explain()),
+            indent_plan(&self.right.explain())
+        )
     }
 }

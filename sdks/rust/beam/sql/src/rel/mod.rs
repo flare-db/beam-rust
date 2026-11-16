@@ -73,4 +73,14 @@ pub(crate) trait BeamRelNode: Send + Sync {
         &self,
         context: &SqlRelContext<'_>,
     ) -> Result<PCollection<ArrowRecordBatch>>;
+
+    /// Formats this node and its inputs as a tree for plan logging.
+    fn explain(&self) -> String;
+}
+
+pub(crate) fn indent_plan(plan: &str) -> String {
+    plan.lines()
+        .map(|line| format!("  {line}"))
+        .collect::<Vec<_>>()
+        .join("\n")
 }

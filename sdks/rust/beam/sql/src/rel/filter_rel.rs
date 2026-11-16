@@ -29,7 +29,7 @@ use datafusion::common::DFSchemaRef;
 use datafusion::logical_expr::Expr;
 use datafusion::physical_expr::PhysicalExpr;
 
-use crate::rel::{BeamRelNode, BeamSqlRelUtils, SqlRelContext};
+use crate::rel::{BeamRelNode, BeamSqlRelUtils, SqlRelContext, indent_plan};
 
 /// Filter and projection node for Beam SQL.
 ///
@@ -91,6 +91,29 @@ impl BeamRelNode for BeamFilterRel {
             }),
         );
         Ok(output.with_arrow_schema(&self.schema))
+    }
+
+    fn explain(&self) -> String {
+        let predicate = self
+            .predicate
+            .as_ref()
+            .map(ToString::to_string)
+            .unwrap_or_default();
+        let projection = self
+            .projection
+            .as_ref()
+            .map(|expressions| {
+                expressions
+                    .iter()
+                    .map(ToString::to_string)
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            })
+            .unwrap_or_default();
+        format!(
+            "BeamFilterRel(predicate=[{predicate}], projection=[{projection}])\n{}",
+            indent_plan(&self.input.explain())
+        )
     }
 }
 

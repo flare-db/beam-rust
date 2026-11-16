@@ -52,4 +52,8 @@ impl BeamRelNode for BeamTableScanRel {
             .ok_or_else(|| Error::msg(format!("SQL table '{}' is not registered", self.table)))?;
         Ok(table.upstream.clone().with_arrow_schema(&table.schema))
     }
+
+    fn explain(&self) -> String {
+        format!("BeamTableScanRel(table=[[{}]])", self.table)
+    }
 }

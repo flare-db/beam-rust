@@ -30,6 +30,11 @@ An example that leverage the powerful SQL syntax in Beam [SqlTransform](https://
 
 [`SqlTransformExample`](https://github.com/apache/beam/blob/master/examples/java/sql/src/main/java/org/apache/beam/examples/sql/SqlTransformExample.java) is a simple pipeline that calculates multiple metrics per key : Min, Max and Sum.
 
+[`NycTaxiSqlExample`](src/main/java/org/apache/beam/examples/NycTaxiSqlExample.java)
+reads NYC TLC trip Parquet data through Beam SQL's Parquet table provider, joins it
+with an in-memory license-to-service table, filters the result, and writes matching
+trips to a text file.
+
 
 ## Schema transform
 
@@ -44,6 +49,10 @@ See [Apache Beam WordCount Example](https://beam.apache.org/get-started/wordcoun
 Gradle cmd line can be similar to:
 
 `./gradlew clean :examples:java:sql:execute  --args="--runner=DirectRunner" -Pdirect-runner -PmainClass=org.apache.beam.examples.sql.SqlTransformExample`
+
+To run the NYC taxi example with the DirectRunner:
+
+`./gradlew :examples:java:sql:execute -PmainClass=org.apache.beam.examples.NycTaxiSqlExample -Pexec.args="--runner=DirectRunner --input=gs://apache-beam-samples/nyc_trip/parquet/fhvhv_tripdata_2023-02.parquet --output=/tmp/sql_nyc_taxi.txt"`
 
 ## Beyond SQL and Schemas
 

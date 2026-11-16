@@ -41,6 +41,7 @@ arrow_io = { workspace = true }
 datafusion = "=55.2.0"
 futures = { workspace = true }
 thiserror = { workspace = true }
+tracing = { workspace = true }
 
 [dev-dependencies]
 testing = { workspace = true, features = ["prism"] }

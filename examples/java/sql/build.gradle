@@ -44,6 +44,7 @@ dependencies {
   implementation project(":sdks:java:extensions:sql")
   implementation library.java.slf4j_api
   runtimeOnly project(path: ":runners:direct-java", configuration: "shadow")
+  runtimeOnly project(":sdks:java:io:parquet")
   runtimeOnly library.java.hadoop_client
   runtimeOnly library.java.bigdataoss_gcs_connector
   testImplementation project(path: ":runners:direct-java", configuration: "shadow")

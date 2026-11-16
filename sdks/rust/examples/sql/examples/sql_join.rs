@@ -44,6 +44,7 @@ const QUERY: &str = r#"
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    beam::logging::init_logging();
     let pipeline = Pipeline::new();
 
     let (customers_schema, customers_batch) = customers();
