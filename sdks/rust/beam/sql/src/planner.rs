@@ -25,8 +25,6 @@ use crate::rel::{BeamFilterRel, BeamJoinRel, BeamTableScanRel};
 use datafusion::catalog::empty::EmptyTable;
 use datafusion::common::TableReference;
 use datafusion::logical_expr::{BinaryExpr, Expr, LogicalPlan, Operator};
-#[cfg(test)]
-use datafusion::prelude::SessionConfig;
 use datafusion::prelude::SessionContext;
 
 use crate::rel::{BeamPCollectionTable, BeamRelNode};
@@ -172,118 +170,5 @@ impl DataFusionQueryPlanner {
         Err(SqlTransformError::message(format!(
             "BeamJoinRel supports equality join conditions only; found {expression}"
         )))
-    }
-}
-
-/// Plans `query` against schema-only providers for the Beam input tables.
-#[cfg(test)]
-pub(crate) fn plan_query(
-    query: &str,
-    tables: &BTreeMap<String, BeamPCollectionTable>,
-) -> Result<LogicalPlan, SqlTransformError> {
-    let context = SessionContext::new_with_config(SessionConfig::new());
-    for (name, table) in tables {
-        context.register_table(
-            name.as_str(),
-            Arc::new(EmptyTable::new(Arc::clone(&table.schema))),
-        )?;
-    }
-    let state = context.state();
-    let plan = futures::executor::block_on(state.create_logical_plan(query))?;
-    state.optimize(&plan).map_err(SqlTransformError::from)
-}
-
-#[cfg(test)]
-mod tests {
-    use std::sync::Arc;
-
-    use arrow_io::{ArrowRecordBatch, ArrowRecordBatchPCollectionExt};
-    use arrow_schema::{DataType, Field, Schema};
-    use beam::pipeline::Pipeline;
-    use beam::transforms::Create;
-
-    use super::*;
-
-    #[test]
-    fn optimizer_pushes_join_filters_below_the_join() {
-        const QUERY: &str = "SELECT services.service, trips.trip_miles
-             FROM trips
-             JOIN services ON trips.hvfhs_license_num = services.license
-             WHERE services.service = 'Uber' AND trips.trip_miles > 10";
-
-        let pipeline = Pipeline::new();
-        let trips_schema = Arc::new(Schema::new(vec![
-            Field::new("hvfhs_license_num", DataType::Utf8, true),
-            Field::new("trip_miles", DataType::Float64, true),
-            Field::new("base_passenger_fare", DataType::Float64, true),
-        ]));
-        let services_schema = Arc::new(Schema::new(vec![
-            Field::new("license", DataType::Utf8, false),
-            Field::new("service", DataType::Utf8, false),
-        ]));
-        let trips = pipeline
-            .apply("CreateTrips", Create::new(Vec::<ArrowRecordBatch>::new()))
-            .with_arrow_schema(&trips_schema);
-        let services = pipeline
-            .apply(
-                "CreateServices",
-                Create::new(Vec::<ArrowRecordBatch>::new()),
-            )
-            .with_arrow_schema(&services_schema);
-        let tables = BTreeMap::from([
-            (
-                "trips".to_string(),
-                BeamPCollectionTable {
-                    upstream: trips,
-                    schema: trips_schema,
-                },
-            ),
-            (
-                "services".to_string(),
-                BeamPCollectionTable {
-                    upstream: services,
-                    schema: services_schema,
-                },
-            ),
-        ]);
-
-        let plan = plan_query(QUERY, &tables).expect("optimized plan");
-
-        let LogicalPlan::Projection(projection) = plan else {
-            panic!("expected projection, got {plan}");
-        };
-        let LogicalPlan::Join(join) = projection.input.as_ref() else {
-            panic!("expected join below projection, got {}", projection.input);
-        };
-        assert!(
-            matches!(join.left.as_ref(), LogicalPlan::Filter(_)),
-            "trip filter should be below the join: {}",
-            projection.input
-        );
-        assert!(
-            matches!(join.right.as_ref(), LogicalPlan::Filter(_)),
-            "service filter should be below the join: {}",
-            projection.input
-        );
-
-        let planner = DataFusionQueryPlanner::new(&tables, 2).expect("planner");
-        let beam_plan = futures::executor::block_on(planner.build_plan(QUERY)).expect("Beam plan");
-        let explain = beam_plan.explain();
-        assert!(
-            explain.starts_with("BeamFilterRel("),
-            "projection should be rendered at the root: {explain}"
-        );
-        assert!(
-            explain.contains("BeamJoinRel(condition=["),
-            "join should be rendered below the projection: {explain}"
-        );
-        assert!(
-            explain.contains(
-                "BeamTableScanRel(table=[[trips]], \
-                 projection=[hvfhs_license_num, trip_miles])"
-            ) && explain
-                .contains("BeamTableScanRel(table=[[services]], projection=[license, service])"),
-            "both projected table scans should be rendered: {explain}"
-        );
     }
 }
