@@ -76,9 +76,11 @@ impl DataFusionQueryPlanner {
         plan: &LogicalPlan,
     ) -> Result<Box<dyn BeamRelNode>, SqlTransformError> {
         match plan {
-            LogicalPlan::TableScan(scan) => Ok(Box::new(BeamTableScanRel::new(Self::table_name(
-                &scan.table_name,
-            )))),
+            LogicalPlan::TableScan(scan) => Ok(Box::new(BeamTableScanRel::new(
+                Self::table_name(&scan.table_name),
+                scan.projection.clone(),
+                Arc::new(scan.projected_schema.as_arrow().clone()),
+            ))),
             LogicalPlan::SubqueryAlias(alias) => self.translate_plan(&alias.input),
             LogicalPlan::Filter(filter) => {
                 let input = self.translate_plan(&filter.input)?;
@@ -276,9 +278,12 @@ mod tests {
             "join should be rendered below the projection: {explain}"
         );
         assert!(
-            explain.contains("BeamTableScanRel(table=[[trips]])")
-                && explain.contains("BeamTableScanRel(table=[[services]])"),
-            "both table scans should be rendered: {explain}"
+            explain.contains(
+                "BeamTableScanRel(table=[[trips]], \
+                 projection=[hvfhs_license_num, trip_miles])"
+            ) && explain
+                .contains("BeamTableScanRel(table=[[services]], projection=[license, service])"),
+            "both projected table scans should be rendered: {explain}"
         );
     }
 }

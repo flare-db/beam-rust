@@ -61,6 +61,7 @@ struct Trip {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    beam::logging::init_logging();
     let pipeline = Pipeline::new();
 
     // The Arrow schema is known from the derived Beam schema of `Trip`.

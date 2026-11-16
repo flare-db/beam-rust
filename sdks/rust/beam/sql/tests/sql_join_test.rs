@@ -446,6 +446,14 @@ fn sql_expansion_partitions_shuffles_and_hash_joins() {
         2,
         "optimizer should push one filter to each join input: {names:?}"
     );
+    assert_eq!(
+        names
+            .iter()
+            .filter(|name| name.contains("/Project_"))
+            .count(),
+        2,
+        "each table scan should materialize its projected columns: {names:?}"
+    );
     assert!(
         names.iter().all(|name| !name.contains("/Projection_")),
         "projection was left as a separate graph node: {names:?}"

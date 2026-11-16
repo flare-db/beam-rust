@@ -38,6 +38,7 @@ const QUERY: &str = "SELECT c1, c2, c3 FROM PCOLLECTION WHERE c1 > 1";
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    beam::logging::init_logging();
     let pipeline = Pipeline::new();
 
     let (schema, batch) = numbers();
