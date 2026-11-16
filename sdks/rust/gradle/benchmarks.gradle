@@ -35,7 +35,7 @@ def dataflowPassthrough = ['gcpProject', 'gcpRegion', 'gcpTempLocation', 'sdkCon
                            'dataflowServiceOptions', 'numberOfWorkerHarnessThreads',
                            'workerTargetCpu', 'exampleFeatures']
 // -P properties that profileCompare gives to the `profilePrism` task of each variant as is.
-def profilePassthrough = ['pkg', 'bin', 'cargoExample', 'cargoBench', 'exampleFeatures']
+def profilePassthrough = ['pkg', 'bin', 'examplePipeline', 'cargoBench', 'exampleFeatures']
 
 def isSet = { String name ->
   def value = project.findProperty(name)
@@ -227,7 +227,7 @@ registerRustBenchmark(
 tasks.register('profileCompare') {
   group = 'Verification'
   description = 'Profile a Rust example on Prism for some rounds (profilePrism, worker profile, CPU mode) ' +
-      'and compare the CPU time ([-Pexample=wordcount] [-Ppkg=.. -Pbin=..|-PcargoExample=..|-PcargoBench=..] ' +
+      'and compare the CPU time ([-Pexample=wordcount] [-Ppkg=.. -Pbin=..|-PexamplePipeline=..|-PcargoBench=..] ' +
       '[-Pinput=<local glob>] [-Prows=<n>] [-PextraArgs=<flags>] [-Pruns=3] [-Pbaseline=<git ref>] ' +
       '[-PcompareTo=<results.json>] [-Ptop=10] [-PdryRun])'
 

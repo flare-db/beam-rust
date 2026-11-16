@@ -169,7 +169,7 @@ impl<T: 'static> PCollection<T> {
 
     /// Replaces the coder of this PCollection in the pipeline graph. The coder must encode `T`.
     /// Call it only on the output of the transform that is being expanded.
-    pub(crate) fn with_coder_id(mut self, coder_id: String) -> Self {
+    pub fn with_coder_id(mut self, coder_id: String) -> Self {
         if let Some(pcoll) = self
             .pipeline
             .lock()
@@ -181,6 +181,13 @@ impl<T: 'static> PCollection<T> {
         }
         self.coder_id = coder_id;
         self
+    }
+
+    /// Returns the payload of this PCollection's coder when its URN is `urn`.
+    pub fn coder_payload_for_urn(&self, urn: &str) -> Option<Vec<u8>> {
+        let lock = self.pipeline.lock();
+        let spec = lock.components.coders.get(&self.coder_id)?.spec.as_ref()?;
+        (spec.urn == urn).then(|| spec.payload.clone())
     }
 
     /// The coder of this PCollection, if the graph has it. The output of a cross-language

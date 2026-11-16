@@ -50,7 +50,7 @@ def criterionProfileSeconds = 10
 
 tasks.register('profilePrism') {
   group = 'Application'
-  description = 'Profile a Rust example locally on Prism with samply and/or time (-Pexample=<name> [-Pbin=<bin> -Ppkg=<crate>] [-PcargoExample=<name> | -PcargoBench=<name>] [-PextraArgs="<pipeline flags>"] [-Prows=<n>] [-Pmode=cpu|memory|both] [-PcargoProfile=worker|release] [-Pout=<dir>]). -Pmode=both runs the pipeline two times.'
+  description = 'Profile a Rust example locally on Prism with samply and/or time (-Pexample=<name> [-Pbin=<bin> -Ppkg=<crate>] [-PexamplePipeline=<name> | -PcargoBench=<name>] [-PextraArgs="<pipeline flags>"] [-Prows=<n>] [-Pmode=cpu|memory|both] [-PcargoProfile=worker|release] [-Pout=<dir>]). -Pmode=both runs the pipeline two times.'
 
   dependsOn 'fetchPrism'
 
@@ -64,9 +64,9 @@ tasks.register('profilePrism') {
   def resolve = propsFor(selectedExample)
   // A Cargo example (`--example`) or bench (`--bench`, with `harness = false`) of a workspace
   // crate, instead of a binary (`--bin`).
-  def cargoExample = project.findProperty('cargoExample')?.toString()
+  def examplePipeline = project.findProperty('examplePipeline')?.toString()
   def cargoBench = project.findProperty('cargoBench')?.toString()
-  def binArg = cargoExample ?: cargoBench ?: project.findProperty('bin') ?: selectedExample
+  def binArg = examplePipeline ?: cargoBench ?: project.findProperty('bin') ?: selectedExample
   def pkgArg = project.findProperty('pkg') ?: selectedExample
   def rowsArg = project.findProperty('rows')
   def outArg = project.findProperty('out') ?: "${buildDir}/reports/profile/${binArg}-${System.currentTimeMillis()}"
@@ -113,7 +113,7 @@ tasks.register('profilePrism') {
       if (hostOs == 'darwin') {
         environment "${profileEnv}_SPLIT_DEBUGINFO", 'unpacked'
       }
-      def target = cargoExample ? ['--example', cargoExample] :
+      def target = examplePipeline ? ['--example', examplePipeline] :
           cargoBench ? ['--bench', cargoBench, '--message-format=json-render-diagnostics'] :
           ['--bin', binArg]
       def cmd = ['cargo', 'build', '--profile', cargoProfile, '-p', pkgArg] + target
@@ -125,8 +125,8 @@ tasks.register('profilePrism') {
     def bench = cargoBench ? benchArtifact(buildOutput.toString(), cargoBench) : null
     def binPath = bench ?
         bench.executable :
-        file(cargoExample ?
-            "${cargoTargetDir}/${cargoProfile}/examples/${cargoExample}" :
+        file(examplePipeline ?
+            "${cargoTargetDir}/${cargoProfile}/examples/${examplePipeline}" :
             "${cargoTargetDir}/${cargoProfile}/${binArg}").absolutePath
     // Profile mode skips criterion's analysis. sdk.properties holds pipeline flags, so only
     // -PextraArgs applies.

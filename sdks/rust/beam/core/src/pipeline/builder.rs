@@ -60,6 +60,11 @@ impl Pipeline {
         Arc::ptr_eq(&self.inner, &other.inner)
     }
 
+    /// Returns a process-local identity suitable for tuple equality and hashing.
+    pub(crate) fn identity_key(&self) -> usize {
+        Arc::as_ptr(&self.inner) as usize
+    }
+
     /// Creates a pipeline configured for `options`: the entry point for pipeline binaries. The
     /// same `main` runs as driver and as worker, and `options` selects the [`ExpansionMode`]
     /// (remote at submission, placeholder in the worker) and the default resource hints.

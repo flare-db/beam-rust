@@ -67,7 +67,7 @@ the `time` output and a summary to `build/reports/profile/<binary>-<timestamp>/`
 
 - `-Pexample=<name>` runs an example. `-Ppkg=<crate> -Pbin=<binary>` runs another
   binary of the workspace.
-- `-Ppkg=<crate> -PcargoExample=<name>` runs a Cargo example of a crate (a file in its
+- `-Ppkg=<crate> -PexamplePipeline=<name>` runs a Cargo example of a crate (a file in its
   `examples` directory), for example a program that profiles one connector.
 - `-Ppkg=<crate> -PcargoBench=<name>` runs a Cargo bench of a crate (`harness = false`), for
   example `-Ppkg=apache-beam-harness -PcargoBench=chain_throughput`. A criterion bench gets

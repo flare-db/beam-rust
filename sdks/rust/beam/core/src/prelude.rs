@@ -57,7 +57,8 @@ pub use crate::transforms::{
 pub use crate::transforms::{Register, State, Timers};
 pub use crate::values::{
     AnySideInput, IntoSideInputs, IsBounded, IterView, MultimapView, PBegin, PCollection,
-    PCollectionList, PDone, SideInputs, SideIter, SideMap, SingletonView,
+    PCollectionList, PCollectionTuple, PDone, SideInputs, SideIter, SideMap, SingletonView,
+    TupleTag,
 };
 pub use crate::windowing::{
     AccumulationMode, BoundedWindow, FixedWindows, GlobalWindows, IntervalWindow, Sessions,

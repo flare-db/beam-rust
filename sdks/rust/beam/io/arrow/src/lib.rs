@@ -31,7 +31,8 @@ pub(crate) mod error;
 pub(crate) mod schema;
 
 pub use batch::{
-    ArrowBeamRowBatchConverter, ArrowRecordBatch, ArrowRecordBatchCoder, ArrowRowBatchConverter,
+    ARROW_RECORD_BATCH_CODER_URN, ArrowBeamRowBatchConverter, ArrowRecordBatch,
+    ArrowRecordBatchCoder, ArrowRecordBatchPCollectionExt, ArrowRowBatchConverter,
 };
 pub use codec::{BeamRowCodec, RowCodec, RowOutput, SchemaRowCodec};
 pub use convert::{

@@ -101,6 +101,7 @@ zstd = { version = "0.14", default-features = false }
 crc32c = "0.6"
 regex = "1.13"
 foldhash = "0.2"
+indexmap = "2.14"
 serde-saphyr = "1"
 ureq = { version = "3", default-features = false, features = ["rustls"] }
 reqwest = { version = "0.13.5", default-features = false, features = ["rustls", "json"] }
@@ -126,12 +127,14 @@ tempfile = "3"
 libc = "0.2"
 mimalloc = { version = "0.1", default-features = false }
 image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }
-arrow-array = { version = "60.0.0", default-features = false }
-arrow-buffer = { version = "60.0.0", default-features = false }
-arrow-schema = { version = "60.0.0", default-features = false }
-arrow-ipc = { version = "60.0.0", default-features = false, features = ["lz4", "zstd"] }
-parquet = { version = "60.0.0", default-features = false, features = ["arrow", "flate2-zlib-rs", "lz4", "snap", "zstd"] }
-arrow-avro = { version = "60.0.0", default-features = false, features = ["deflate", "snappy", "zstd"] }
+arrow-array = { version = "59.2.0", default-features = false }
+arrow-buffer = { version = "59.2.0", default-features = false }
+arrow-row = { version = "59.2.0", default-features = false }
+arrow-schema = { version = "59.2.0", default-features = false }
+arrow-select = { version = "59.2.0", default-features = false }
+arrow-ipc = { version = "59.2.0", default-features = false, features = ["lz4", "zstd"] }
+parquet = { version = "59.2.0", default-features = false, features = ["arrow", "flate2-zlib-rs", "lz4", "snap", "zstd"] }
+arrow-avro = { version = "59.2.0", default-features = false, features = ["deflate", "snappy", "zstd"] }
 
 # Internal workspace crates
 beam = { package = "apache-beam", path = "beam", version = "2.78.0-SNAPSHOT" }

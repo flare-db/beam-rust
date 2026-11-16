@@ -25,10 +25,12 @@
 //! [`PTransform`]: crate::transforms::PTransform
 
 mod pcollection;
+mod pcollection_tuple;
 mod pvalue;
 mod view;
 
 pub use pcollection::{IsBounded, PCollection, PCollectionList};
+pub use pcollection_tuple::{AnyPCollection, PCollectionTuple, TupleTag};
 pub use pvalue::{PBegin, PDone, PInput, POutput};
 #[doc(hidden)]
 pub use view::SideInputScope;

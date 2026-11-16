@@ -44,6 +44,7 @@ prost-types = { workspace = true }
 tracing = { workspace = true }
 tokio = { workspace = true }
 foldhash = { workspace = true }
+indexmap = { workspace = true }
 
 [features]
 # Opt-in, mirroring `serde`'s `derive` feature.

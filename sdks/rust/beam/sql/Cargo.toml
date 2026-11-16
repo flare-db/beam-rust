@@ -33,3 +33,15 @@ name = "sql"
 
 [dependencies]
 beam = { package = "apache-beam-core", path = "../core", version = "2.78.0-SNAPSHOT" }
+arrow-array = { workspace = true }
+arrow-row = { workspace = true }
+arrow-schema = { workspace = true }
+arrow-select = { workspace = true }
+arrow_io = { workspace = true }
+datafusion = "=55.2.0"
+futures = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+testing = { workspace = true, features = ["prism"] }
+tokio = { workspace = true }

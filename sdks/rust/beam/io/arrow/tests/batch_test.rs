@@ -20,11 +20,14 @@
 use std::sync::Arc;
 
 use arrow_io::{
-    ArrowBeamRowBatchConverter, ArrowRecordBatch, ArrowRecordBatchCoder, ArrowRowBatchConverter,
+    ARROW_RECORD_BATCH_CODER_URN, ArrowBeamRowBatchConverter, ArrowRecordBatch,
+    ArrowRecordBatchCoder, ArrowRecordBatchPCollectionExt, ArrowRowBatchConverter,
 };
 use beam::coders::{Coder, CoderRegistry, Context, DefaultCoder};
+use beam::pipeline::Pipeline;
 use beam::schema::{BeamRow, FieldType, FieldValue, Row, Schema};
 use beam::transforms::BatchConverter;
+use beam::values::IsBounded;
 
 #[derive(Clone, Debug, PartialEq, BeamRow)]
 struct MetricRecord {
@@ -150,7 +153,7 @@ impl CoderRegistry for RecordingRegistry {
 
 #[test]
 fn test_arrow_record_batch_coder_urn_and_element_round_trip() {
-    const URN: &str = "beam:coder:arrow_record_batch:v1";
+    const URN: &str = ARROW_RECORD_BATCH_CODER_URN;
     assert_eq!(ArrowRecordBatchCoder.urn(), URN);
     assert_eq!(ArrowRecordBatch::coder().urn(), URN);
 
@@ -173,4 +176,23 @@ fn test_arrow_record_batch_coder_urn_and_element_round_trip() {
     assert!(!bytes.is_empty());
     let decoded = ArrowRecordBatch::decode_element(&mut bytes.as_slice()).expect("decode");
     assert_eq!(converter.explode(decoded).expect("explode"), [record]);
+}
+
+#[test]
+fn arrow_pcollection_round_trips_schema_metadata() {
+    use arrow_schema::{DataType, Field, Schema as ArrowSchema};
+
+    let pipeline = Pipeline::new();
+    let coder_id = ArrowRecordBatch::register_coder(&pipeline);
+    let collection = pipeline
+        .add_pcollection::<ArrowRecordBatch>("Arrow", &coder_id, IsBounded::Bounded)
+        .with_arrow_schema(&ArrowSchema::new(vec![Field::new(
+            "id",
+            DataType::Int64,
+            false,
+        )]));
+
+    let schema = collection.arrow_schema().expect("schema metadata");
+    assert_eq!(schema.field(0).name(), "id");
+    assert_eq!(schema.field(0).data_type(), &DataType::Int64);
 }

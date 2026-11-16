@@ -148,9 +148,11 @@ tasks.register('prism', Exec) {
     def extraArgs = (resolve('extraArgs') ?: '').toString().tokenize(' ')
     def features = (resolve('exampleFeatures') ?: '').toString().trim()
     def featureFlags = features ? ['--features', features] : []
+    def examplePipeline = project.findProperty('examplePipeline')?.toString()
+    def examplePipelineFlags = examplePipeline ? ['--example', examplePipeline] : []
     def gcpArgs = portableGcpArgs(resolve)
     def cmd = [
-      'cargo', 'run', '--release', '-p', selectedExample, *featureFlags, '--',
+      'cargo', 'run', '--release', '-p', selectedExample, *examplePipelineFlags, *featureFlags, '--',
       '--runner=PrismRunner',
       *(dockerMode
           ? ['--environment_type=DOCKER', "--environment_config=${envConfig}"] + workerFlag

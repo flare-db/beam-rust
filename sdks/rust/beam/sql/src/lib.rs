@@ -17,4 +17,9 @@
  * under the License.
  */
 
-pub(crate) mod sql_transform;
+mod planner;
+mod rel;
+mod sql_transform;
+mod transform;
+
+pub use sql_transform::SqlTransform;

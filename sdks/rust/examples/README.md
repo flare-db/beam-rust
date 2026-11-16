@@ -28,6 +28,7 @@ The Gradle launch tasks run `cargo run --release -p <example> -- <runner flags> 
 (see [`prism.gradle`](../gradle/prism.gradle) and [`dataflow.gradle`](../gradle/dataflow.gradle)):
 
 - `-Pexample=<name>` selects the package (default `wordcount`).
+- `-PexamplePipeline=<name>` selects an example target in a multi-example crate.
 - `-PextraArgs="..."` appends pipeline flags. Values are split on spaces.
 - `-PexampleFeatures=<features>` passes `--features` to `cargo run`.
 - `:sdks:rust:prism` runs with `--environment_type=LOOPBACK`. Add `-Pdocker` to run the
@@ -47,6 +48,7 @@ tests:
 | [`streaming`](#streaming-continuous-ingestion-with-periodicimpulse) | `PeriodicImpulse`, fixed windows, `sum_per_key` |
 | [`side_inputs`](#side-inputs) | Singleton and iterable side inputs in a `DoFn` struct |
 | [`join`](#relational-joins) | `co_group_by_key`, inner, left, right and full outer joins |
+| [`sql`](#sql-sql) | `SqlTransform` examples: join, filter/projection, and NYC taxi Parquet join |
 | [`tfidf`](#tf-idf-tfidf) | `distinct`, counts, joins, singleton side input, TFRecord of `tf.train.Example` |
 | [`gaming`](#mobile-gaming-stateful-processing--metrics) | Stateful DoFn, user metrics |
 | [`partition`](#multiple-outputs--flatten-partition) | Typed outputs with `#[derive(Outputs)]`, `Flatten` |
@@ -157,6 +159,32 @@ the inner, left, right and full outer joins, then merges the results with `Flatt
 ./gradlew :sdks:rust:prism -Pexample=join \
   -PextraArgs="--users=/path/to/users.csv --orders=/path/to/orders.csv --output=/tmp/join.txt"
 ```
+
+## SQL (`sql`)
+
+The `sql` example crate has three independent Cargo examples that run a `SqlTransform` over
+Arrow tables and write text output.
+
+Join customers with orders, filtering on one customer (`/tmp/sql_join.txt`):
+
+```bash
+./gradlew :sdks:rust:prism -Pexample=sql -PexamplePipeline=sql_join
+```
+
+Filter and project a single table, the `BeamSqlExample` case (`/tmp/sql_filter.txt`):
+
+```bash
+./gradlew :sdks:rust:prism -Pexample=sql -PexamplePipeline=sql_filter
+```
+
+Read NYC TLC Parquet trips, convert them to Arrow, join a license-to-service lookup table,
+and filter by service and distance (`/tmp/sql_nyc_taxi.txt`):
+
+```bash
+./gradlew :sdks:rust:prism -Pexample=sql -PexamplePipeline=sql_nyc_taxi
+```
+
+The writers use `without_sharding()`, so each output file keeps the exact path.
 
 ## TF-IDF (`tfidf`)
 

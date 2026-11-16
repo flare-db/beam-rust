@@ -27,16 +27,23 @@ use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 
 use arrow_array::RecordBatch;
+use arrow_ipc::convert::{IpcSchemaEncoder, fb_to_schema};
 use arrow_ipc::reader::StreamReader;
+use arrow_ipc::root_as_schema;
 use arrow_ipc::writer::StreamWriter;
+use arrow_schema::{Schema as ArrowSchema, SchemaRef};
 use beam::coders::{Coder, CoderError, CoderRegistry, Context, DefaultCoder, VarIntCoder};
 use beam::schema::{BeamRow, Row, Schema};
 use beam::transforms::BatchConverter;
+use beam::values::PCollection;
 
 use crate::convert::{
     beam_rows_to_record_batch, record_batch_to_beam_rows, record_batch_to_rows,
     rows_to_record_batch,
 };
+
+/// Runner API URN of [`ArrowRecordBatchCoder`].
+pub const ARROW_RECORD_BATCH_CODER_URN: &str = "beam:coder:arrow_record_batch:v1";
 
 /// A [`RecordBatch`] whose [`DefaultCoder`] uses the Arrow IPC streaming format.
 #[derive(Clone, Debug, PartialEq)]
@@ -85,7 +92,7 @@ pub struct ArrowRecordBatchCoder;
 
 impl Coder<ArrowRecordBatch> for ArrowRecordBatchCoder {
     fn urn(&self) -> &'static str {
-        "beam:coder:arrow_record_batch:v1"
+        ARROW_RECORD_BATCH_CODER_URN
     }
 
     fn encode(
@@ -150,7 +157,37 @@ impl DefaultCoder for ArrowRecordBatch {
     }
 
     fn register_coder<R: CoderRegistry + ?Sized>(registry: &R) -> String {
-        registry.register_coder("beam:coder:arrow_record_batch:v1", vec![])
+        registry.register_coder(ARROW_RECORD_BATCH_CODER_URN, vec![])
+    }
+}
+
+/// Schema metadata for [`PCollection<ArrowRecordBatch>`] values.
+pub trait ArrowRecordBatchPCollectionExt {
+    /// Attaches `schema` to the record-batch coder and returns the same PCollection.
+    fn with_arrow_schema(self, schema: &ArrowSchema) -> Self;
+
+    /// Returns the Arrow schema carried by the record-batch coder, if present.
+    fn arrow_schema(&self) -> Option<SchemaRef>;
+}
+
+impl ArrowRecordBatchPCollectionExt for PCollection<ArrowRecordBatch> {
+    fn with_arrow_schema(self, schema: &ArrowSchema) -> Self {
+        let payload = {
+            let builder = IpcSchemaEncoder::new().schema_to_fb(schema);
+            builder.finished_data().to_vec()
+        };
+        let coder_id = self.pipeline().register_coder_with_payload(
+            ARROW_RECORD_BATCH_CODER_URN,
+            Vec::new(),
+            payload,
+        );
+        self.with_coder_id(coder_id)
+    }
+
+    fn arrow_schema(&self) -> Option<SchemaRef> {
+        let payload = self.coder_payload_for_urn(ARROW_RECORD_BATCH_CODER_URN)?;
+        let schema = root_as_schema(&payload).ok()?;
+        Some(Arc::new(fb_to_schema(schema)))
     }
 }
 
