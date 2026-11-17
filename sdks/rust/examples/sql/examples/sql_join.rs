@@ -23,6 +23,7 @@
 //! lists the orders of one customer.
 //!
 //! ```text
+//! cd examples/sql
 //! cargo run -p sql --example sql_join
 //! cat /tmp/sql_join.txt
 //! ```

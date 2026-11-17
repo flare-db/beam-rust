@@ -22,6 +22,7 @@
 //! This ports Case 1 of Java's `BeamSqlExample`: `SELECT ... WHERE c1 > 1`.
 //!
 //! ```text
+//! cd examples/sql
 //! cargo run -p sql --example sql_filter
 //! cat /tmp/sql_filter.txt
 //! ```

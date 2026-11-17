@@ -23,6 +23,7 @@
 //! and runs a SQL join and filter. It writes the matching trips to a text file.
 //!
 //! ```text
+//! cd examples/sql
 //! cargo run -p sql --example sql_nyc_taxi
 //! cat /tmp/sql_nyc_taxi.txt
 //! ```
