@@ -16,6 +16,9 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
+//! Hash-partitioned Arrow join transform.
+
 use std::sync::Arc;
 
 use arrow_array::RecordBatch;
@@ -41,6 +44,7 @@ use datafusion::physical_plan::joins::{HashJoinExec, PartitionMode};
 use datafusion::physical_plan::repartition::BatchPartitioner;
 use datafusion::prelude::SessionContext;
 
+/// Partitions two Arrow inputs and connects matching rows with a hash join.
 pub(crate) struct Join {
     left_expressions: Vec<Arc<dyn PhysicalExpr>>,
     right_expressions: Vec<Arc<dyn PhysicalExpr>>,
@@ -80,6 +84,7 @@ impl Join {
 impl PTransform<PCollectionList<ArrowRecordBatch>> for Join {
     type Output = PCollection<ArrowRecordBatch>;
 
+    /// Expands the join into partition, co-group, and hash-join transforms.
     fn expand(&self, input: &PCollectionList<ArrowRecordBatch>) -> Self::Output {
         let (Some(left_rows), Some(right_rows)) = (input.get(0), input.get(1)) else {
             return join_error_output(input.pipeline(), "Join requires two input PCollections");
@@ -167,6 +172,7 @@ impl DoFn for HashJoinFn {
     type In = (i32, CoGbkResult);
     type Out = ArrowRecordBatch;
 
+    /// Joins both co-grouped inputs and emits each output batch.
     fn process_element(
         &mut self,
         (_partition, grouped): Self::In,
@@ -240,6 +246,7 @@ struct PartitionFn {
 }
 
 impl PartitionFn {
+    /// Creates a keyed hash partitioner for Arrow batches.
     fn new(num_partitions: usize, hash_exprs: Vec<Arc<dyn PhysicalExpr>>) -> Self {
         Self {
             num_partitions,
@@ -285,6 +292,7 @@ impl DoFn for PartitionFn {
     type In = ArrowRecordBatch;
     type Out = (i32, ArrowRecordBatch);
 
+    /// Creates the hash partitioner before bundle processing.
     fn setup(&mut self) -> Result {
         self.partitioner = Some(
             BatchPartitioner::new_hash_partitioner(
@@ -297,6 +305,7 @@ impl DoFn for PartitionFn {
         Ok(())
     }
 
+    /// Emits each hash partition batch with its partition ID.
     fn process_element(
         &mut self,
         batch: Self::In,

@@ -17,6 +17,8 @@
  * under the License.
  */
 
+//! Join translation for Beam SQL.
+
 use arrow_io::{ArrowRecordBatch, ArrowRecordBatchPCollectionExt};
 use arrow_schema::SchemaRef;
 use beam::values::{IsBounded, PCollection, PCollectionList};
@@ -27,7 +29,7 @@ use datafusion::logical_expr::{Expr, JoinType};
 use crate::rel::{BeamRelNode, BeamSqlRelUtils, SqlRelContext, indent_plan};
 use crate::transform::join::Join;
 
-/// An equality join of two Beam SQL inputs.
+/// SQL equality join.
 pub(crate) struct BeamJoinRel {
     left: Box<dyn BeamRelNode>,
     right: Box<dyn BeamRelNode>,
@@ -40,6 +42,7 @@ pub(crate) struct BeamJoinRel {
 }
 
 impl BeamJoinRel {
+    /// Creates a BeamJoinRel from DataFusion join metadata.
     #[expect(
         clippy::too_many_arguments,
         reason = "the constructor maps one-to-one to DataFusion Join metadata"
@@ -91,6 +94,7 @@ impl BeamJoinRel {
 }
 
 impl BeamRelNode for BeamJoinRel {
+    /// Expands the join into partition, co-group, and hash-join transforms.
     fn build_ptransform(
         &self,
         context: &SqlRelContext<'_>,
@@ -133,6 +137,7 @@ impl BeamRelNode for BeamJoinRel {
         Ok(joined.with_arrow_schema(&self.output_schema))
     }
 
+    /// Formats the join keys and child plans for logging.
     fn explain(&self) -> String {
         let condition = self
             .on

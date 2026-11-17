@@ -17,6 +17,10 @@
  * under the License.
  */
 //! DataFusion query planning for Beam SQL.
+//!
+//! The planner registers input table schemas as empty DataFusion tables. It uses those schemas to
+//! resolve names and plan each query. It then translates supported logical nodes into Beam
+//! relational nodes.
 
 use std::collections::BTreeMap;
 use std::sync::Arc;
@@ -30,6 +34,7 @@ use datafusion::prelude::SessionContext;
 use crate::rel::{BeamPCollectionTable, BeamRelNode};
 use crate::sql_transform::SqlTransformError;
 
+/// Plans SQL queries against registered Arrow table schemas.
 #[derive(Clone)]
 pub struct DataFusionQueryPlanner {
     ctx: SessionContext,
@@ -37,6 +42,7 @@ pub struct DataFusionQueryPlanner {
 }
 
 impl DataFusionQueryPlanner {
+    /// Registers the table names and schemas for query planning.
     pub fn new(
         tables: &BTreeMap<String, BeamPCollectionTable>,
         partition_size: usize,
@@ -54,6 +60,7 @@ impl DataFusionQueryPlanner {
         })
     }
 
+    /// Parses and optimizes a query, then translates its logical plan for BeamRelNode.
     pub async fn build_plan(
         &self,
         sql_statement: &str,
@@ -69,6 +76,7 @@ impl DataFusionQueryPlanner {
         Ok(beam_plan)
     }
 
+    /// Translates supported DataFusion logical nodes into Beam relational nodes.
     fn translate_plan(
         &self,
         plan: &LogicalPlan,
@@ -142,10 +150,12 @@ impl DataFusionQueryPlanner {
         }
     }
 
+    /// Returns the unqualified table name from a DataFusion table reference.
     fn table_name(table: &TableReference) -> String {
         table.table().to_string()
     }
 
+    /// Splits an equality condition into left and right key expressions.
     fn extract_equality_join_keys(
         expression: &Expr,
     ) -> Result<Vec<(Expr, Expr)>, SqlTransformError> {

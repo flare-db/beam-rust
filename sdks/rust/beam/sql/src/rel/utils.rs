@@ -47,6 +47,7 @@ impl BeamSqlRelUtils {
             .map_err(SqlTransformError::from)
     }
 
+    /// Compiles a DataFusion expression against the input schema.
     pub(crate) fn compile_expr(
         expression: &Expr,
         input_schema: &DFSchemaRef,
@@ -56,6 +57,7 @@ impl BeamSqlRelUtils {
             .map_err(Error::from)
     }
 
+    /// Evaluates an expression as an array with the batch row count.
     pub(crate) fn evaluate_array(
         expression: &Arc<dyn PhysicalExpr>,
         batch: &RecordBatch,

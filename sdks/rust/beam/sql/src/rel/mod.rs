@@ -42,17 +42,21 @@ pub(crate) use utils::BeamSqlRelUtils;
 /// The table name is the key of the map that holds it.
 #[derive(Clone)]
 pub(crate) struct BeamPCollectionTable {
+    /// Collection that supplies the SQL table rows.
     pub upstream: PCollection<ArrowRecordBatch>,
+    /// Arrow schema for each batch in `upstream`.
     pub schema: SchemaRef,
 }
 
 /// Inputs available while expanding a translated SQL plan.
 pub(crate) struct SqlRelContext<'a> {
+    /// Tables keyed by SQL table name.
     pub tables: &'a BTreeMap<String, BeamPCollectionTable>,
     next_transform_id: AtomicUsize,
 }
 
 impl<'a> SqlRelContext<'a> {
+    /// Creates context for the registered SQL tables.
     pub(crate) fn new(tables: &'a BTreeMap<String, BeamPCollectionTable>) -> Self {
         Self {
             tables,
@@ -60,6 +64,7 @@ impl<'a> SqlRelContext<'a> {
         }
     }
 
+    /// Returns a unique transform name with the requested operation prefix.
     pub(crate) fn transform_name(&self, kind: &str) -> String {
         let id = self.next_transform_id.fetch_add(1, Ordering::Relaxed);
         format!("{kind}_{id}")
@@ -78,6 +83,7 @@ pub(crate) trait BeamRelNode: Send + Sync {
     fn explain(&self) -> String;
 }
 
+/// Indents each line to show parent and child nodes in a plan tree.
 pub(crate) fn indent_plan(plan: &str) -> String {
     plan.lines()
         .map(|line| format!("  {line}"))

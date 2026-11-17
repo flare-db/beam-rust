@@ -17,6 +17,11 @@
  * under the License.
  */
 
+//! Converts SQL queries into Beam transforms over Arrow record batches.
+//!
+//! [`SqlTransform`] registers each input PCollection as a SQL table. It then plans the query with
+//! DataFusion and expands supported relational operations into Beam transforms.
+
 mod planner;
 mod rel;
 mod sql_transform;

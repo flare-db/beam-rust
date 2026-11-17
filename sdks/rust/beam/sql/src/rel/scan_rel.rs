@@ -17,6 +17,8 @@
  * under the License.
  */
 
+//! Table scan translation for Beam SQL.
+
 use arrow_io::{ArrowRecordBatch, ArrowRecordBatchPCollectionExt};
 use arrow_schema::SchemaRef;
 use beam::transforms::{DoFn, ParDo, ProcessContext};
@@ -33,6 +35,7 @@ pub(crate) struct BeamTableScanRel {
 }
 
 impl BeamTableScanRel {
+    /// Creates a scan for a registered table with an optional column projection.
     pub(crate) fn new(
         table: String,
         projection: Option<Vec<usize>>,
@@ -47,6 +50,7 @@ impl BeamTableScanRel {
 }
 
 impl BeamRelNode for BeamTableScanRel {
+    /// Expands the table scan into a projection transform when needed.
     fn build_ptransform(
         &self,
         context: &SqlRelContext<'_>,
@@ -76,6 +80,7 @@ impl BeamRelNode for BeamTableScanRel {
         Ok(output.with_arrow_schema(&self.projected_schema))
     }
 
+    /// Formats the table name and projected fields for logging.
     fn explain(&self) -> String {
         let projection = self
             .projection
@@ -105,6 +110,7 @@ impl DoFn for ProjectFn {
     type In = ArrowRecordBatch;
     type Out = ArrowRecordBatch;
 
+    /// Selects the configured columns from one Arrow batch.
     fn process_element(
         &mut self,
         batch: Self::In,

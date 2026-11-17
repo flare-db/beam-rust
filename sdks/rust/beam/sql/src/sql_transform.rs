@@ -16,6 +16,9 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
+//! SQL transform construction and input table resolution.
+
 use std::collections::{BTreeMap, BTreeSet};
 
 use arrow_io::{ArrowRecordBatch, ArrowRecordBatchPCollectionExt};
@@ -35,7 +38,7 @@ use crate::rel::{BeamPCollectionTable, BeamSqlRelUtils, SqlRelContext};
 const PCOLLECTION_NAME: &str = "PCOLLECTION";
 const DEFAULT_PARTITION_SIZE: usize = 2;
 
-/// Beam SQL transform.
+/// Applies one SQL query to one or more Arrow PCollections.
 #[derive(Clone, Debug)]
 pub struct SqlTransform {
     query: String,
@@ -52,15 +55,20 @@ impl SqlTransform {
     }
 
     /// Creates a transform for `query` with the default options.
+    ///
+    /// The transform records query errors on the pipeline during expansion.
     pub fn query(query: impl Into<String>) -> Self {
         Self::builder(query).build()
     }
 
     /// Sets how many post-shuffle key groups one DataFusion join execution receives.
+    ///
+    /// A value of zero records a construction error during expansion.
     pub fn with_partition_size(self, size: usize) -> Self {
         self.into_builder().with_partition_size(size).build()
     }
 
+    /// Converts this transform into its temporary builder.
     fn into_builder(self) -> SqlTransformBuilder {
         SqlTransformBuilder {
             query: self.query,
@@ -69,7 +77,7 @@ impl SqlTransform {
     }
 }
 
-/// Builder for an immutable [`SqlTransform`].
+/// Stores the SQL query and join partition count before construction.
 #[derive(Clone, Debug)]
 struct SqlTransformBuilder {
     query: String,
@@ -77,11 +85,13 @@ struct SqlTransformBuilder {
 }
 
 impl SqlTransformBuilder {
+    /// Updates the number of hash partitions for joins.
     fn with_partition_size(mut self, size: usize) -> Self {
         self.partition_size = size;
         self
     }
 
+    /// Builds the immutable SQL transform.
     fn build(self) -> SqlTransform {
         SqlTransform {
             query: self.query,
@@ -91,6 +101,10 @@ impl SqlTransformBuilder {
 }
 
 impl SqlTransform {
+    /// Validates the inputs, plans the query, and expands its Beam graph.
+    ///
+    /// On failure, this method records a construction error on the pipeline. It then returns an
+    /// empty output PCollection with an empty Arrow schema.
     fn execute(
         &self,
         pipeline: &Pipeline,
@@ -139,6 +153,7 @@ impl SqlTransform {
 impl PTransform<PCollection<ArrowRecordBatch>> for SqlTransform {
     type Output = PCollection<ArrowRecordBatch>;
 
+    /// Runs the query with the input collection as the `PCOLLECTION` table.
     fn expand(&self, input: &PCollection<ArrowRecordBatch>) -> Self::Output {
         self.execute(input.pipeline(), resolve_single_input_table(input))
     }
@@ -147,11 +162,13 @@ impl PTransform<PCollection<ArrowRecordBatch>> for SqlTransform {
 impl PTransform<PCollectionTuple> for SqlTransform {
     type Output = PCollection<ArrowRecordBatch>;
 
+    /// Runs the query with each tuple collection as a named SQL table.
     fn expand(&self, input: &PCollectionTuple) -> Self::Output {
         self.execute(input.pipeline(), resolve_input_tables(input))
     }
 }
 
+/// Builds the SQL table map from an Arrow-schema PCollection tuple.
 fn resolve_input_tables(
     tuple: &PCollectionTuple,
 ) -> Result<BTreeMap<String, BeamPCollectionTable>, SqlTransformError> {
@@ -193,6 +210,7 @@ fn resolve_input_tables(
         .map(|(_, inputs)| inputs)
 }
 
+/// Builds a single SQL table named `PCOLLECTION`.
 fn resolve_single_input_table(
     input: &PCollection<ArrowRecordBatch>,
 ) -> Result<BTreeMap<String, BeamPCollectionTable>, SqlTransformError> {
@@ -213,21 +231,26 @@ fn resolve_single_input_table(
 /// Error returned while SQL parsing, planning, translation, or expansion fails.
 #[derive(Debug, thiserror::Error)]
 pub(crate) enum SqlTransformError {
+    /// Contains a validation or planning error message.
     #[error("{0}")]
     Message(String),
+    /// Wraps a DataFusion error.
     #[error(transparent)]
     DataFusion(#[from] DataFusionError),
+    /// Wraps a Beam error.
     #[error("{0}")]
     Beam(Error),
 }
 
 impl SqlTransformError {
+    /// Creates an error from a message.
     pub(crate) fn message(message: impl Into<String>) -> Self {
         Self::Message(message.into())
     }
 }
 
 impl From<Error> for SqlTransformError {
+    /// Converts a Beam error into a SQL transform error.
     fn from(error: Error) -> Self {
         Self::Beam(error)
     }

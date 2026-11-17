@@ -17,4 +17,6 @@
  * under the License.
  */
 
+//! Beam transforms used by SQL relational nodes.
+
 pub(crate) mod join;

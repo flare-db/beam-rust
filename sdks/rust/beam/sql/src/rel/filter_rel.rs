@@ -16,6 +16,9 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
+//! Filter and projection translation for Beam SQL.
+
 use std::sync::Arc;
 
 use arrow_array::{Array, BooleanArray, RecordBatch, RecordBatchOptions};
@@ -39,28 +42,30 @@ pub(crate) struct BeamFilterRel {
     input_schema: DFSchemaRef,
     predicate: Option<Expr>,
     projection: Option<Vec<Expr>>,
-    schema: SchemaRef,
+    output_schema: SchemaRef,
 }
 
 impl BeamFilterRel {
+    /// Creates a filter with an optional output projection.
     pub(crate) fn new(
         input: Box<dyn BeamRelNode>,
         input_schema: DFSchemaRef,
         predicate: Option<Expr>,
         projection: Option<Vec<Expr>>,
-        schema: SchemaRef,
+        output_schema: SchemaRef,
     ) -> Self {
         Self {
             input,
             input_schema,
             predicate,
             projection,
-            schema,
+            output_schema,
         }
     }
 }
 
 impl BeamRelNode for BeamFilterRel {
+    /// Compiles the expressions and expands one filter transform.
     fn build_ptransform(
         &self,
         context: &SqlRelContext<'_>,
@@ -87,12 +92,13 @@ impl BeamRelNode for BeamFilterRel {
             ParDo::new(FilterFn {
                 predicate,
                 projection,
-                schema: Arc::clone(&self.schema),
+                output_schema: Arc::clone(&self.output_schema),
             }),
         );
-        Ok(output.with_arrow_schema(&self.schema))
+        Ok(output.with_arrow_schema(&self.output_schema))
     }
 
+    /// Formats the predicate, projection, and child plan for logging.
     fn explain(&self) -> String {
         let predicate = self
             .predicate
@@ -117,17 +123,19 @@ impl BeamRelNode for BeamFilterRel {
     }
 }
 
+/// Applies the compiled predicate and projection to each Arrow batch.
 #[derive(Clone)]
 struct FilterFn {
     predicate: Option<Arc<dyn PhysicalExpr>>,
     projection: Option<Vec<Arc<dyn PhysicalExpr>>>,
-    schema: SchemaRef,
+    output_schema: SchemaRef,
 }
 
 impl DoFn for FilterFn {
     type In = ArrowRecordBatch;
     type Out = ArrowRecordBatch;
 
+    /// Filters one batch, then emits the projected rows when any remain.
     fn process_element(
         &mut self,
         batch: Self::In,
@@ -157,7 +165,11 @@ impl DoFn for FilterFn {
                 .iter()
                 .map(|expression| BeamSqlRelUtils::evaluate_array(expression, &filtered))
                 .collect::<Result<Vec<_>>>()?;
-            try_record_batch(Arc::clone(&self.schema), columns, filtered.num_rows())?
+            try_record_batch(
+                Arc::clone(&self.output_schema),
+                columns,
+                filtered.num_rows(),
+            )?
         } else {
             filtered
         };
@@ -165,11 +177,12 @@ impl DoFn for FilterFn {
     }
 }
 
+/// Builds a projected batch with an explicit row count.
 fn try_record_batch(
-    schema: SchemaRef,
+    output_schema: SchemaRef,
     columns: Vec<arrow_array::ArrayRef>,
     row_count: usize,
 ) -> Result<RecordBatch> {
     let options = RecordBatchOptions::new().with_row_count(Some(row_count));
-    RecordBatch::try_new_with_options(schema, columns, &options).map_err(Error::from)
+    RecordBatch::try_new_with_options(output_schema, columns, &options).map_err(Error::from)
 }
